@@ -1,5 +1,7 @@
-author: mongoose-os
-description: A Mongoose OS app skeleton
+name: TempHumidityIOT
+author: j-pai
+description: Temperature and Humidity tracking device
+arch: ESP8266
 version: 1.0
 
 libs_version: ${mos.version}
