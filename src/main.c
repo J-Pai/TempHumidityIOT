@@ -14,8 +14,8 @@ typedef struct {
   struct mgos_rlock_type * data_lock;
   float temperature;
   float humidity;
-  struct mbuf * temperature_history;
-  struct mbuf * humidity_history;
+  struct mbuf temperature_history;
+  struct mbuf humidity_history;
   struct mgos_rlock_type * hist_data_lock;
 } Sensor_DHT;
 
@@ -116,12 +116,15 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
+  // Initializing DHT Structure
   Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
-
   dht->data_lock = mgos_rlock_create();
   dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
   dht->hist_data_lock = mgos_rlock_create();
+  mbuf_init(&dht->temperature_history, 8);
+  mbuf_init(&dht->humidity_history, 8);
 
+  // Initializing Status LEDs
   mgos_gpio_setup_output(MAIN_LED, 1);
   mgos_gpio_setup_output(SECONDARY_LED, 1);
   mgos_gpio_setup_output(TERTIARY_LED, 1);
