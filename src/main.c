@@ -107,7 +107,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   // Setup HTTP call to obtain current Temperature and Humidity
   mgos_register_http_endpoint("/dht", get_dht_data_handler, dht);
   // Setup Periodic Measurement of Temperature and Humidity
-  mgos_set_timer(5000, true, dht_measurement, dht);
+  mgos_set_timer(2500, true, dht_measurement, dht);
   // Setup Periodic Led Flashing
   mgos_set_timer(1000, true, led_status, NULL);
   // Setup Periodic Reporting of HTTP Server Info
