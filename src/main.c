@@ -16,21 +16,41 @@ typedef struct {
   float humidity;
 } Sensor_DHT;
 
+typedef struct {
+  struct mbuf * temperature_history;
+  struct mbuf * humidity_history;
+  struct mgos_rlock_type * data_lock;
+} Sensor_DHT_History;
+
 static void dht_measurement(void * arg) {
   Sensor_DHT * dht = (Sensor_DHT *)arg;
-  float temp = mgos_dht_get_temp(dht->sensor);
-  if (true == mgos_sys_config_get_app_dht_fahrenheit()) {
-    temp = C_TO_F(temp);
-  }
-  float humi = mgos_dht_get_humidity(dht->sensor);
-  LOG(LL_INFO, ("Pin: %d | Temperature: %1f | Humidity: %1f",
-    mgos_sys_config_get_app_dht_pin(),
-    temp,
-    humi));
+  static bool dht_tick_tock = false;
   mgos_rlock(dht->data_lock);
-  dht->temperature = temp;
-  dht->humidity = humi;
+  float temp = dht->temperature;
+  float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
+  if (dht_tick_tock) {
+    temp = mgos_dht_get_temp(dht->sensor);
+    if (true == mgos_sys_config_get_app_dht_fahrenheit()) {
+      temp = C_TO_F(temp);
+    }
+    mgos_rlock(dht->data_lock);
+    dht->temperature = temp;
+    mgos_runlock(dht->data_lock);
+  } else {
+    humi = mgos_dht_get_humidity(dht->sensor) + mgos_sys_config_get_app_dht_humidity_offset();
+    mgos_rlock(dht->data_lock);
+    dht->humidity = humi;
+    mgos_runlock(dht->data_lock);
+  }
+  if (false == mgos_sys_config_get_app_silent()) {
+    LOG(LL_INFO, ("Pin: %d | Temperature: %.1f | Humidity: %.1f (Offset: %d)",
+      mgos_sys_config_get_app_dht_pin(),
+      temp,
+      humi,
+      mgos_sys_config_get_app_dht_humidity_offset()));
+  }
+  dht_tick_tock = !dht_tick_tock;
 }
 
 static void server_status(void * arg) {
@@ -85,17 +105,22 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   Sensor_DHT * dht = (Sensor_DHT *)user_data;
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
-  LOG(LL_INFO, ("DHT Data Requested"));
-  mg_send_response_line(c, 200,
-                        "Content-Type: text/html\r\n");
   mgos_rlock(dht->data_lock);
-  mg_printf(c, "{\"temperature\": %1f, \"humidity\": %1f}", dht->temperature, dht->humidity);
+  float temp = dht->temperature;
+  float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
+  LOG(LL_INFO, ("DHT Data Requested | Temperature: %.1f | Humidity: %.1f (Offset: %d)",
+    temp, humi,
+    mgos_sys_config_get_app_dht_humidity_offset()));
+  mg_send_response_line(c, 200,
+                        "Content-Type: text/json\r\n");
+  mg_printf(c, "{\"temperature\": %.1f, \"humidity\": %.1f}", temp, humi);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
   Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
+  // Sensor_DHT_History * dht_hist = (Sensor_DHT *)malloc(sizeof(Sensor_DHT_History));
 
   dht->data_lock = mgos_rlock_create();
   dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);

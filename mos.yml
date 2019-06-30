@@ -29,8 +29,9 @@ filesystem:
 
 config_schema:
   - ["app.dht.pin", "i", 5, {title: "GPIO pin DHT sensor is attached to"}]
-  - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
-  - ["app.silent", "b", false, {title: "Enable silent running (No LEDs, No Logs)"}]
+  - ["app.dht.fahrenheit", "b", true, {title: "Use Fahrenheit"}]
+  - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
+  - ["app.silent", "b", true, {title: "Enable silent running (No LEDs, No Logs)"}]
 #  - ["http.document_root", "/"]
 #  - ["my_app", "o", {title: "My app custom settings"}]
 #  - ["my_app.bool_value", "b", false, {title: "Some boolean value"}]
