@@ -15,6 +15,7 @@ Temperature and Humidity history is stored in onboard flash. Hourly scheduled me
 ```
 mos wifi <SSID> <PASSWD>
 mos config-set app.dht.fahrenheit=1
+mos config-set app.silent=true
 mos call Sys.GetInfo
 mos console
 ```

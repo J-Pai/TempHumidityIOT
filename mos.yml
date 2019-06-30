@@ -30,6 +30,7 @@ filesystem:
 config_schema:
   - ["app.dht.pin", "i", 5, {title: "GPIO pin DHT sensor is attached to"}]
   - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
+  - ["app.silent", "b", false, {title: "Enable silent running (No LEDs, No Logs)"}]
 #  - ["http.document_root", "/"]
 #  - ["my_app", "o", {title: "My app custom settings"}]
 #  - ["my_app.bool_value", "b", false, {title: "Some boolean value"}]
