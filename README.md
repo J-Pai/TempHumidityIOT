@@ -2,6 +2,7 @@
 ## Documentation
 - https://github.com/nodemcu/nodemcu-devkit-v1.0
 - https://github.com/cesanta/mongoose-os
+- https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md
 
 ## Overview
 Embedded code using Mongoose OS which keeps track of current temperature and humidity. Device used is the NodeMCU DevKit version 1.0.
