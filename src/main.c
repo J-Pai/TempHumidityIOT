@@ -111,7 +111,7 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
     mgos_sys_config_get_app_dht_humidity_offset()));
   mg_send_response_line(c, 200,
                         "Content-Type: text/json\r\n");
-  mg_printf(c, "{\"temperature\": %.1f, \"humidity\": %.1f}", temp, humi);
+  mg_printf(c, "{\"t\": %.1f, \"h\": %.1f}", temp, humi);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
