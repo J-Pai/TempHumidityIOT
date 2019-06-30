@@ -1,4 +1,5 @@
 #include "mgos.h"
+#include "mgos_system.h"
 #include "mgos_dht.h"
 
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
@@ -7,15 +8,29 @@
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
-static void dht_measurement(void * dht) {
-  float temp = mgos_dht_get_temp(dht);
+typedef struct {
+  struct mgos_dht * sensor;
+  struct mgos_rlock_type * data_lock;
+  float temperature;
+  float humidity;
+} Sensor_DHT;
+
+static void dht_measurement(void * arg) {
+  Sensor_DHT * dht = (Sensor_DHT *)arg;
+  float temp = mgos_dht_get_temp(dht->sensor);
   if (true == mgos_sys_config_get_app_dht_fahrenheit()) {
     temp = C_TO_F(temp);
   }
+  float humi = mgos_dht_get_humidity(dht->sensor);
   LOG(LL_INFO, ("Pin: %d | Temperature: %1f | Humidity: %1f",
     mgos_sys_config_get_app_dht_pin(),
     temp,
-    mgos_dht_get_humidity(dht)));
+    humi
+  ));
+  mgos_rlock(dht->data_lock);
+  dht->temperature = temp;
+  dht->humidity = humi;
+  mgos_runlock(dht->data_lock);
 }
 
 static void server_status(void * arg) {
@@ -55,10 +70,15 @@ static void led_status(void * arg) {
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
-  struct mgos_dht * dht = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
+  Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
+
+  dht->data_lock = mgos_rlock_create();
+  dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
+
   mgos_gpio_setup_output(MAIN_LED, 1);
   mgos_gpio_setup_output(SECONDARY_LED, 1);
   mgos_gpio_setup_output(TERTIARY_LED, 1);
+
   // Setup Periodic Measurement of Temperature and Humidity
   mgos_set_timer(1000, true, dht_measurement, dht);
   // Setup Periodic Led Flashing
