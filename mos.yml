@@ -8,6 +8,9 @@ libs_version: ${mos.version}
 modules_version: ${mos.version}
 mongoose_os_version: ${mos.version}
 
+build_vars:
+  FS_SIZE: 524288
+
 # Optional. List of tags for online search.
 tags:
   - c
@@ -24,7 +27,10 @@ filesystem:
 # Below is a custom firmware configuration example.
 # Uncomment and modify according to your needs:
 
-# config_schema:
+config_schema:
+  - ["app.dht.pin", "i", 5, {title: "GPIO pin DHT sensor is attached to"}]
+  - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
+#  - ["http.document_root", "/"]
 #  - ["my_app", "o", {title: "My app custom settings"}]
 #  - ["my_app.bool_value", "b", false, {title: "Some boolean value"}]
 #  - ["my_app.string_value", "s", "", {title: "Some string value"}]
@@ -53,6 +59,8 @@ libs:
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
   - origin: https://github.com/mongoose-os-libs/rpc-service-fs
   - origin: https://github.com/mongoose-os-libs/rpc-uart
+  - origin: https://github.com/mongoose-os-libs/dht
+  - origin: https://github.com/mongoose-os-libs/http-server
 
 # Used by the mos tool to catch mos binaries incompatible with this file format
 manifest_version: 2017-09-29

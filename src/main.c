@@ -1,39 +1,40 @@
-/*
- * Copyright (c) 2014-2018 Cesanta Software Limited
- * All rights reserved
- *
- * Licensed under the Apache License, Version 2.0 (the ""License"");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an ""AS IS"" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #include "mgos.h"
+#include "mgos_dht.h"
 
-static void timer_cb(void *arg) {
-  static bool s_tick_tock = false;
-  LOG(LL_INFO,
-      ("%s uptime: %.2lf, RAM: %lu, %lu free", (s_tick_tock ? "Tick" : "Tock"),
-       mgos_uptime(), (unsigned long) mgos_get_heap_size(),
-       (unsigned long) mgos_get_free_heap_size()));
-  s_tick_tock = !s_tick_tock;
-#ifdef LED_PIN
-  mgos_gpio_toggle(LED_PIN);
-#endif
+#define C_TO_F(c) (((c) * 1.8f) + 32.0f)
+
+static void dht_measurement(void * dht) {
+  float temp = mgos_dht_get_temp(dht);
+
+  if (true == mgos_sys_config_get_app_dht_fahrenheit()) {
+    temp = C_TO_F(temp);
+  }
+
+  LOG(LL_INFO, ("Pin: %d | Temperature: %1f | Humidity: %1f",
+    mgos_sys_config_get_app_dht_pin(),
+    temp,
+    mgos_dht_get_humidity(dht)));
+}
+
+static void server_status(void * arg) {
+  enum mgos_wifi_status status = mgos_wifi_get_status();
+
+  if (status == MGOS_WIFI_IP_ACQUIRED) {
+    LOG(LL_INFO, ("Network Connected [%d]", status));
+  } else if (status == MGOS_WIFI_CONNECTED || status == MGOS_WIFI_CONNECTING) {
+    LOG(LL_INFO, ("Network Pending... [%d]", status));
+  } else {
+    LOG(LL_INFO, ("Network Disconnected [%d]", status));
+  }
+
   (void) arg;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
-#ifdef LED_PIN
-  mgos_gpio_setup_output(LED_PIN, 0);
-#endif
-  mgos_set_timer(1000 /* ms */, MGOS_TIMER_REPEAT, timer_cb, NULL);
+  struct mgos_dht * dht = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
+  // Setup Periodic Measurement of Temperature and Humidity
+  mgos_set_timer(1000, true, dht_measurement, dht);
+  // Setup Periodic Reporting of HTTP Server Info
+  mgos_set_timer(5000, true, server_status, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }
