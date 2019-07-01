@@ -120,6 +120,8 @@ static void store_dht_measurement(void * arg) {
   float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
   if (temp >= 0 && humi >= 0) {
+    // TODO: Add time stamp to stored data.
+    // TODO: Use mgos_sys_config_get_app_dht_history_length() to maintain a maximum number of data points.
     char data[22];
     sprintf(data, ",{\"t\":%05.1f,\"h\":%05.1f}", temp, humi);
     mgos_rlock(dht->hist_data_lock);
