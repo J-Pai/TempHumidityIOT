@@ -135,7 +135,7 @@ static void store_dht_measurement(void * arg) {
         temp,
         humi,
         mgos_sys_config_get_app_dht_humidity_offset()));
-    } else if (!mgos_sys_config_get_app_silent()) {
+    } else { // if (!mgos_sys_config_get_app_silent()) {
       LOG(LL_INFO, ("Stored DHT Measurement! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
         appended,
         dht->history.len,
