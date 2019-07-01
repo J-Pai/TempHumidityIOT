@@ -32,11 +32,6 @@ config_schema:
   - ["app.dht.fahrenheit", "b", true, {title: "Use Fahrenheit"}]
   - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
   - ["app.silent", "b", true, {title: "Enable silent running (No LEDs, No Logs)"}]
-#  - ["http.document_root", "/"]
-#  - ["my_app", "o", {title: "My app custom settings"}]
-#  - ["my_app.bool_value", "b", false, {title: "Some boolean value"}]
-#  - ["my_app.string_value", "s", "", {title: "Some string value"}]
-#  - ["my_app.int_value", "i", 123, {title: "Some integer value"}]
 
 # These settings get compiled into the C structure, and can be accessed
 # from the C code this way:

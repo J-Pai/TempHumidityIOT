@@ -14,9 +14,8 @@ typedef struct {
   struct mgos_rlock_type * data_lock;
   float temperature;
   float humidity;
-  struct mbuf temperature_history;
-  struct mbuf humidity_history;
   struct mgos_rlock_type * hist_data_lock;
+  struct mbuf history;
 } Sensor_DHT;
 
 static void dht_measurement(void * arg) {
@@ -28,7 +27,7 @@ static void dht_measurement(void * arg) {
   mgos_runlock(dht->data_lock);
   if (dht_tick_tock) {
     temp = mgos_dht_get_temp(dht->sensor);
-    if (true == mgos_sys_config_get_app_dht_fahrenheit()) {
+    if (mgos_sys_config_get_app_dht_fahrenheit()) {
       temp = C_TO_F(temp);
     }
     mgos_rlock(dht->data_lock);
@@ -40,8 +39,8 @@ static void dht_measurement(void * arg) {
     dht->humidity = humi;
     mgos_runlock(dht->data_lock);
   }
-  if (false == mgos_sys_config_get_app_silent()) {
-    LOG(LL_INFO, ("Pin: %d | Temperature: %.1f | Humidity: %.1f (Offset: %d)",
+  if (!mgos_sys_config_get_app_silent()) {
+    LOG(LL_INFO, ("Pin: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
       mgos_sys_config_get_app_dht_pin(),
       temp,
       humi,
@@ -83,7 +82,7 @@ static void server_status(void * arg) {
 }
 
 static void led_status(void * arg) {
-  if (false == mgos_sys_config_get_app_silent()) {
+  if (!mgos_sys_config_get_app_silent()) {
     mgos_gpio_toggle(MAIN_LED);
     if (MGOS_WIFI_IP_ACQUIRED == mgos_wifi_get_status()) {
       mgos_gpio_toggle(SECONDARY_LED);
@@ -102,27 +101,62 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   Sensor_DHT * dht = (Sensor_DHT *)user_data;
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
+  mgos_rlock(dht->hist_data_lock);
+  size_t len = dht->history.len;
+  char histStore[len];
+  MEMCPY(histStore, dht->history.buf, len);
+  mgos_runlock(dht->hist_data_lock);
+  LOG(LL_INFO, ("DHT Data Requested"));
+  mg_send_response_line(c, 200,
+                        "Content-Type: text/json\r\n");
+  mg_send(c, histStore, len);
+  c->flags |= (MG_F_SEND_AND_CLOSE);
+}
+
+static void store_dht_measurement(void * arg) {
+  Sensor_DHT * dht = (Sensor_DHT *)arg;
   mgos_rlock(dht->data_lock);
   float temp = dht->temperature;
   float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
-  LOG(LL_INFO, ("DHT Data Requested | Temperature: %.1f | Humidity: %.1f (Offset: %d)",
-    temp, humi,
-    mgos_sys_config_get_app_dht_humidity_offset()));
-  mg_send_response_line(c, 200,
-                        "Content-Type: text/json\r\n");
-  mg_printf(c, "{\"t\": %.1f, \"h\": %.1f}", temp, humi);
-  c->flags |= (MG_F_SEND_AND_CLOSE);
+  if (temp >= 0 && humi >= 0) {
+    char data[22];
+    sprintf(data, ",{\"t\":%05.1f,\"h\":%05.1f}", temp, humi);
+    mgos_rlock(dht->hist_data_lock);
+    size_t appended = mbuf_append(
+      &dht->history,
+      dht->history.len ? data : &data[1],
+      (dht->history.len ? 22 : 21) * sizeof(char));
+    if (!appended) {
+      LOG(LL_ERROR, ("Temperature not stored! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+        appended,
+        dht->history.len,
+        dht->history.size,
+        temp,
+        humi,
+        mgos_sys_config_get_app_dht_humidity_offset()));
+    } else if (!mgos_sys_config_get_app_silent()) {
+      LOG(LL_INFO, ("Stored DHT Measurement! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+        appended,
+        dht->history.len,
+        dht->history.size,
+        temp,
+        humi,
+        mgos_sys_config_get_app_dht_humidity_offset()));
+    }
+    mgos_runlock(dht->hist_data_lock);
+  }
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
   // Initializing DHT Structure
   Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
-  dht->data_lock = mgos_rlock_create();
   dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
+  dht->data_lock = mgos_rlock_create();
+  dht->temperature = 0.0f;
+  dht->humidity = 0.0f;
   dht->hist_data_lock = mgos_rlock_create();
-  mbuf_init(&dht->temperature_history, 8);
-  mbuf_init(&dht->humidity_history, 8);
+  mbuf_init(&dht->history, 0);
 
   // Initializing Status LEDs
   mgos_gpio_setup_output(MAIN_LED, 1);
@@ -133,6 +167,8 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_register_http_endpoint("/dht", get_dht_data_handler, dht);
   // Setup Periodic Measurement of Temperature and Humidity
   mgos_set_timer(2500, true, dht_measurement, dht);
+  // Setup Periodic Storing of Temperature and Humidity
+  mgos_set_timer(10000, true, store_dht_measurement, dht);
   // Setup Periodic Led Flashing
   mgos_set_timer(1000, true, led_status, NULL);
   // Setup Periodic Reporting of HTTP Server Info
