@@ -168,7 +168,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   // Setup Periodic Measurement of Temperature and Humidity
   mgos_set_timer(2500, true, dht_measurement, dht);
   // Setup Periodic Storing of Temperature and Humidity
-  mgos_set_timer(10000, true, store_dht_measurement, dht);
+  mgos_set_timer(mgos_sys_config_get_app_dht_history_period(), true, store_dht_measurement, dht);
   // Setup Periodic Led Flashing
   mgos_set_timer(1000, true, led_status, NULL);
   // Setup Periodic Reporting of HTTP Server Info
