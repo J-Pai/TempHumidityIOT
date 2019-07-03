@@ -6,7 +6,7 @@
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
 
 #define MAIN_LED 16
-#define HISTORY_POINT_LEN 22
+#define HISTORY_POINT_LEN 56
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
@@ -116,24 +116,34 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
 
 static void store_dht_measurement(void * arg) {
   Sensor_DHT * dht = (Sensor_DHT *)arg;
+  static unsigned int index = 0;
   mgos_rlock(dht->data_lock);
   float temp = dht->temperature;
   float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
-  if (temp >= 0 && humi >= 0) {
-    // TODO: Add time stamp to stored data.
-    // TODO: Use mgos_sys_config_get_app_dht_history_length() to maintain a maximum number of data points.
+  char timestamp[30];
+  time_t now;
+  time(&now);
+  /**
+   * Ensure that current time is past 2019/01/01.
+   *
+   * If time is before that, chances are internal time has been reset...
+   */
+  if (now > (long)1546300800 && temp >= 0 && humi >= 0) {
+    // int time_len =
+    mgos_strftime(timestamp, 30, "%FT%T", now);
+    // LOG(LL_INFO, ("Time: %s %d", timestamp, time_len));
     char data[HISTORY_POINT_LEN];
-    sprintf(data, ",{\"t\":%05.1f,\"h\":%05.1f}", temp, humi);
+    sprintf(data, ",{\"i\":%03u,\"d\":\"%s\",\"t\":%05.1f,\"h\":%05.1f}", index, timestamp, temp, humi);
+    // LOG(LL_INFO, ("Data: [%s]", data));
     mgos_rlock(dht->hist_data_lock);
-
     int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-    LOG(LL_INFO, ("Pre-Removal Num Elements: %d", num_elements));
+    // LOG(LL_INFO, ("Pre-Removal Num Elements: %d", num_elements));
     if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
       mbuf_remove(&dht->history, HISTORY_POINT_LEN);
     }
     num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-    LOG(LL_INFO, ("Post-Removal Num Elements: %d", num_elements));
+    // LOG(LL_INFO, ("Post-Removal Num Elements: %d", num_elements));
 
     if (num_elements < mgos_sys_config_get_app_dht_history_length()) {
       size_t appended = mbuf_append(
@@ -156,6 +166,7 @@ static void store_dht_measurement(void * arg) {
           temp,
           humi,
           mgos_sys_config_get_app_dht_humidity_offset()));
+          index = (index + 1) % 999;
       }
     } else {
       LOG(LL_ERROR, ("Bad config history length?"));
