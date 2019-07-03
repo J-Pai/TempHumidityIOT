@@ -17,6 +17,7 @@ Humidity/Temperature sensor used is a DHT11.
 - Displays current temperature and humidity values.
 - Displays a history of recorded temperature and humidity values.
 - CSS Framework: [Semantic UI (2.4.2)](https://semantic-ui.com/)
+- Chart Framework: [Chart.js (2.8.0)](https://www.chartjs.org/)
 
 ## Build, Flash, Use
 1) `mos build` - Build code and generate fw.zip file.
