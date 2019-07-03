@@ -13,6 +13,11 @@ Temperature and Humidity history is stored in onboard flash. Hourly scheduled me
 
 Humidity/Temperature sensor used is a DHT11.
 
+## Web Interface
+- Displays current temperature and humidity values.
+- Displays a history of recorded temperature and humidity values.
+- CSS Framework: [Semantic UI (2.4.2)]("https://semantic-ui.com/")
+
 ## Build, Flash, Use
 1) `mos build` - Build code and generate fw.zip file.
 2) `mos flash` - Flash onto ESP8266 board.

@@ -8,14 +8,15 @@ function requestCurrTempHumi() {
     $.ajax({
         url: HOST + "/dht"
     }).done(function(data) {
-        let infoTempHumi = JSON.parse(data);
-        console.log(infoTempHumi);
-        let timestamp = Date(infoTempHumi.d);
-        let temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
-        let tempType = infoTempHumi.t.includes("F") ? "F" : "C";
-        let humi = parseFloat(infoTempHumi.h);
+        const infoTempHumi = JSON.parse(data);
+        const timestamp = Date(infoTempHumi.d);
+        const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
+        const tempType = infoTempHumi.t.includes("F") ? "F" : "C";
+        const humi = parseFloat(infoTempHumi.h);
 
-        $('currTemp')
+        $('#currTemp').html(temp + "&#176;" + tempType);
+        $('#currHumi').html(humi + "%");
+        $('#currTimestamp').html(timestamp.toString());
 
         console.log(timestamp, temp, tempType, humi);
     }).fail(function(xhr, status) {
@@ -23,7 +24,19 @@ function requestCurrTempHumi() {
     });
 }
 
-requestCurrTempHumi();
-
 $(document).ready(function() {
+    function requestHistTempHumi() {
+        $.ajax({
+            url: HOST + "/dht/history"
+        }).done(function(data) {
+            const jsonStr = "[" + data + "]";
+            const histTempHumi = JSON.parse(jsonStr);
+            console.log(histTempHumi);
+        }).fail(function(xhr, status) {
+            console.log(xhr, status);
+        });
+
+    }
+    requestCurrTempHumi();
+    requestHistTempHumi();
 });
