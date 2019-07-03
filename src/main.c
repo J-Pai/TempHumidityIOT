@@ -6,6 +6,7 @@
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
 
 #define MAIN_LED 16
+#define HISTORY_POINT_LEN 22
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
@@ -122,29 +123,42 @@ static void store_dht_measurement(void * arg) {
   if (temp >= 0 && humi >= 0) {
     // TODO: Add time stamp to stored data.
     // TODO: Use mgos_sys_config_get_app_dht_history_length() to maintain a maximum number of data points.
-    char data[22];
+    char data[HISTORY_POINT_LEN];
     sprintf(data, ",{\"t\":%05.1f,\"h\":%05.1f}", temp, humi);
     mgos_rlock(dht->hist_data_lock);
-    size_t appended = mbuf_append(
-      &dht->history,
-      dht->history.len ? data : &data[1],
-      (dht->history.len ? 22 : 21) * sizeof(char));
-    if (!appended) {
-      LOG(LL_ERROR, ("Temperature not stored! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
-        appended,
-        dht->history.len,
-        dht->history.size,
-        temp,
-        humi,
-        mgos_sys_config_get_app_dht_humidity_offset()));
-    } else { // if (!mgos_sys_config_get_app_silent()) {
-      LOG(LL_INFO, ("Stored DHT Measurement! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
-        appended,
-        dht->history.len,
-        dht->history.size,
-        temp,
-        humi,
-        mgos_sys_config_get_app_dht_humidity_offset()));
+
+    int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
+    LOG(LL_INFO, ("Pre-Removal Num Elements: %d", num_elements));
+    if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
+      mbuf_remove(&dht->history, HISTORY_POINT_LEN);
+    }
+    num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
+    LOG(LL_INFO, ("Post-Removal Num Elements: %d", num_elements));
+
+    if (num_elements < mgos_sys_config_get_app_dht_history_length()) {
+      size_t appended = mbuf_append(
+        &dht->history,
+        dht->history.len ? data : &data[1],
+        (dht->history.len ? HISTORY_POINT_LEN : HISTORY_POINT_LEN - 1) * sizeof(char));
+      if (!appended) {
+        LOG(LL_ERROR, ("Temperature not stored! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+          appended,
+          dht->history.len,
+          dht->history.size,
+          temp,
+          humi,
+          mgos_sys_config_get_app_dht_humidity_offset()));
+      } else { // if (!mgos_sys_config_get_app_silent()) {
+        LOG(LL_INFO, ("Stored DHT Measurement! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+          appended,
+          dht->history.len,
+          dht->history.size,
+          temp,
+          humi,
+          mgos_sys_config_get_app_dht_humidity_offset()));
+      }
+    } else {
+      LOG(LL_ERROR, ("Bad config history length?"));
     }
     mgos_runlock(dht->hist_data_lock);
   }
