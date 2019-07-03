@@ -6,7 +6,7 @@
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
 
 #define MAIN_LED 16
-#define HISTORY_POINT_LEN 56
+#define HISTORY_POINT_LEN 57
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
@@ -102,14 +102,36 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   Sensor_DHT * dht = (Sensor_DHT *)user_data;
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
+  mgos_rlock(dht->data_lock);
+  float temp = dht->temperature;
+  float humi = dht->humidity;
+  mgos_runlock(dht->data_lock);
+  LOG(LL_INFO, ("DHT Data Requested"));
+  char timestamp[30];
+  time_t now;
+  time(&now);
+  mgos_strftime(timestamp, 30, "%FT%T", now);
+  char data[HISTORY_POINT_LEN - 9];
+  sprintf(data, "{\"d\":\"%s\",\"t\":%05.1f%c,\"h\":%05.1f}",
+    timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
+  mg_send_response_line(c, 200,
+                        "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
+  mg_send(c, data, HISTORY_POINT_LEN - 9);
+  c->flags |= (MG_F_SEND_AND_CLOSE);
+}
+
+static void get_dht_history_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
+  Sensor_DHT * dht = (Sensor_DHT *)user_data;
+  (void) p;
+  if (ev != MG_EV_HTTP_REQUEST) return;
   mgos_rlock(dht->hist_data_lock);
   size_t len = dht->history.len;
   char histStore[len];
   MEMCPY(histStore, dht->history.buf, len);
   mgos_runlock(dht->hist_data_lock);
-  LOG(LL_INFO, ("DHT Data Requested"));
+  LOG(LL_INFO, ("DHT History Data Requested"));
   mg_send_response_line(c, 200,
-                        "Content-Type: text/json\r\n");
+                        "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, histStore, len);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
@@ -134,7 +156,8 @@ static void store_dht_measurement(void * arg) {
     mgos_strftime(timestamp, 30, "%FT%T", now);
     // LOG(LL_INFO, ("Time: %s %d", timestamp, time_len));
     char data[HISTORY_POINT_LEN];
-    sprintf(data, ",{\"i\":%03u,\"d\":\"%s\",\"t\":%05.1f,\"h\":%05.1f}", index, timestamp, temp, humi);
+    sprintf(data, ",{\"i\":%03u,\"d\":\"%s\",\"t\":%05.1f%c,\"h\":%05.1f}",
+      index, timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
     // LOG(LL_INFO, ("Data: [%s]", data));
     mgos_rlock(dht->hist_data_lock);
     int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
@@ -192,6 +215,8 @@ enum mgos_app_init_result mgos_app_init(void) {
 
   // Setup HTTP call to obtain current Temperature and Humidity
   mgos_register_http_endpoint("/dht", get_dht_data_handler, dht);
+  // Setup HTTP call to obtain history Temperature and Humidity
+  mgos_register_http_endpoint("/dht/history", get_dht_history_data_handler, dht);
   // Setup Periodic Measurement of Temperature and Humidity
   mgos_set_timer(2500, true, dht_measurement, dht);
   // Setup Periodic Storing of Temperature and Humidity
