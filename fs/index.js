@@ -1,6 +1,6 @@
 const HOST = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ?
     "http://192.168.0.104" : "";
-console.log(HOST);
+console.log("HOST:", HOST);
 /**
  * Make request for Temperature and Humidity and apply to HTML.
  */
