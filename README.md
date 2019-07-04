@@ -41,6 +41,7 @@ mos console
 ## Documentation
 ### Hardware/OS Documentation
 - https://github.com/nodemcu/nodemcu-devkit-v1.0
+- https://nodemcu.readthedocs.io/en/master/
 - https://github.com/cesanta/mongoose-os
 - https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md
 ### Web App Documentation
