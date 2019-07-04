@@ -118,7 +118,6 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
                         "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, data, HISTORY_POINT_LEN - 11);
   c->flags |= (MG_F_SEND_AND_CLOSE);
-  free(c);
 }
 
 static void get_dht_history_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
@@ -135,7 +134,6 @@ static void get_dht_history_data_handler(struct mg_connection * c, int ev, void 
                         "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, histStore, len);
   c->flags |= (MG_F_SEND_AND_CLOSE);
-  free(c);
 }
 
 static void store_dht_measurement(void * arg) {
