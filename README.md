@@ -1,8 +1,4 @@
 # Temp and Humidity Tracker IOT
-## Documentation
-- https://github.com/nodemcu/nodemcu-devkit-v1.0
-- https://github.com/cesanta/mongoose-os
-- https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md
 
 ## Overview
 Embedded code using Mongoose OS which keeps track of current temperature and humidity. Device used is the NodeMCU DevKit version 1.0.
@@ -33,3 +29,13 @@ mos config-set app.silent=false
 mos call Sys.GetInfo
 mos console
 ```
+
+## Documentation
+### Hardware/OS Documentation
+- https://github.com/nodemcu/nodemcu-devkit-v1.0
+- https://github.com/cesanta/mongoose-os
+- https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md
+### Web App Documentation
+- https://semantic-ui.com/introduction/getting-started.html
+- https://www.chartjs.org/docs/latest/
+- https://momentjs.com/docs/
