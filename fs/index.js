@@ -24,7 +24,6 @@ window.chartBgColors = {
 
 
 $(document).ready(function () {
-    let tempType = "";
     let refreshCnt = 0;
 
     const tempDataset = {
@@ -140,13 +139,11 @@ $(document).ready(function () {
     requestHistTempHumi();
 
     $('#refreshBtn').on('click', function() {
-        console.log('Refresh Clicked! ' + refreshCnt);
         if(!$('#refreshBtn').hasClass('loading')) {
             requestCurrTempHumi();
             requestHistTempHumi();
         } else {
             console.log('Refresh in Progress!');
         }
-        refreshCnt++;
     });
 });
