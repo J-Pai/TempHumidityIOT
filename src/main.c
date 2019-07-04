@@ -161,6 +161,7 @@ static void store_dht_measurement(void * arg) {
     if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
       mbuf_remove(&dht->history, HISTORY_POINT_LEN);
     }
+    num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
 
     if (num_elements < mgos_sys_config_get_app_dht_history_length()) {
       size_t appended = mbuf_append(
