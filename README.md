@@ -5,7 +5,7 @@ Embedded code using Mongoose OS which keeps track of current temperature and hum
 
 This DevKit contains a built in ESP8266 Wifi Chip.
 
-Temperature and Humidity history is stored in onboard flash. Hourly scheduled measurements will be stored up to 10 days. Can be accessed/dumped by accessing embedded webserver.
+Temperature and Humidity history is stored in onboard flash. Can be accessed/dumped by accessing embedded webserver. Period and number of historical data points and be adjusted via the mos.yml config file.
 
 Humidity/Temperature sensor used is a DHT11.
 
@@ -14,6 +14,8 @@ Humidity/Temperature sensor used is a DHT11.
 - Displays a history of recorded temperature and humidity values.
 - CSS Framework: [Semantic UI (2.4.2)](https://semantic-ui.com/)
 - Chart Framework: [Chart.js (2.8.0)](https://www.chartjs.org/)
+
+![Interface](.md/IOT_Interface.png)
 
 ## Cloning Repo
 This repository contains Mongoose OS as a submodule for auto-complete purposes.
