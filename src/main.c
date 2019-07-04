@@ -6,7 +6,7 @@
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
 
 #define MAIN_LED 16
-#define HISTORY_POINT_LEN 61
+#define HISTORY_POINT_LEN 64
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
@@ -57,7 +57,7 @@ static void server_status(void * arg) {
     char * ssid = mgos_wifi_get_connected_ssid();
     struct mgos_net_ip_info ip_info;
     bool obtained = mgos_net_get_ip_info(MGOS_NET_IF_TYPE_WIFI, 0, &ip_info);
-    char ip[16];
+    char ip[16] = "";
     mgos_net_ip_to_str(&(ip_info.ip), ip);
     LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free | Network Connected (Status: %d)[%s][%s]",
       (s_tick_tock ? "Tick" : "Tock"),
@@ -107,16 +107,16 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
   LOG(LL_INFO, ("DHT Data Requested"));
-  char timestamp[30];
+  char timestamp[30] = "";
   time_t now;
   time(&now);
-  mgos_strftime(timestamp, 30, "%FT%T", now);
-  char data[HISTORY_POINT_LEN - 9];
+  mgos_strftime(timestamp, 30, "%FT%TZ", now);
+  char data[HISTORY_POINT_LEN - 9] = "";
   sprintf(data, "{\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
     timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
   mg_send_response_line(c, 200,
                         "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
-  mg_send(c, data, HISTORY_POINT_LEN - 9);
+  mg_send(c, data, HISTORY_POINT_LEN - 11);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
@@ -143,7 +143,7 @@ static void store_dht_measurement(void * arg) {
   float temp = dht->temperature;
   float humi = dht->humidity;
   mgos_runlock(dht->data_lock);
-  char timestamp[30];
+  char timestamp[30] = "";
   time_t now;
   time(&now);
   /**
@@ -153,10 +153,10 @@ static void store_dht_measurement(void * arg) {
    */
   if (now > (long)1546300800 && temp >= 0 && humi >= 0) {
     // int time_len =
-    mgos_strftime(timestamp, 30, "%FT%T", now);
+    mgos_strftime(timestamp, 30, "%FT%TZ", now);
     // LOG(LL_INFO, ("Time: %s %d", timestamp, time_len));
-    char data[HISTORY_POINT_LEN];
-    sprintf(data, ",{\"i\":%03u,\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
+    char data[HISTORY_POINT_LEN] = "";
+    sprintf(data, ",{\"i\":\"%03u\",\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
       index, timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
     // LOG(LL_INFO, ("Data: [%s]", data));
     mgos_rlock(dht->hist_data_lock);

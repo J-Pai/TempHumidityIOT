@@ -2,11 +2,12 @@
 <head>
 	<meta charset="utf-8"/>
 	<title>IOT Temp & Humidity</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
-	<script src="https://code.jquery.com/jquery-3.4.1.min.js"
-		integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.css">
+	<script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/moment@2.24.0/moment.min.js"></script>
 	<script type="text/javascript" src="index.js"></script>
 </head>
 <body>
@@ -16,6 +17,8 @@
 		</div>
 		<div class="ui container">
 			<div class="ui segment">
+				<div class="ui teal ribbon label" id="currTimestamp"></div>
+				<p></p>
 				<div class="ui internally celled center aligned grid">
 					<div class="middle aligned row">
 						<div class="eight wide column">
@@ -32,11 +35,9 @@
 						</div>
 					</div>
 				</div>
-				<p></p>
-				<div class="ui teal ribbon label" id="currTimestamp"></div>
 			</div>
-			<div class="ui segment">
-
+			<div class="ui center aligned segment">
+				<canvas id="histTempHumi"></canvas>
 			</div>
 		</div>
 	</div>
