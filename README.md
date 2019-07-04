@@ -15,6 +15,12 @@ Humidity/Temperature sensor used is a DHT11.
 - CSS Framework: [Semantic UI (2.4.2)](https://semantic-ui.com/)
 - Chart Framework: [Chart.js (2.8.0)](https://www.chartjs.org/)
 
+## Cloning Repo
+This repository contains Mongoose OS as a submodule for auto-complete purposes.
+1) `git clone https://github.com/J-Pai/TempHumidityIOT.git` - Clone the repo.
+2) `cd TempHumidityIOT` - CD into repo.
+3) git submodule update --init --recursive` - Bringing in Mongoose OS for auto-complete purposes.
+
 ## Build, Flash, Use
 1) `mos build` - Build code and generate fw.zip file.
 2) `mos flash` - Flash onto ESP8266 board.
