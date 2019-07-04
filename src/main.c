@@ -115,7 +115,7 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   sprintf(data, "{\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
     timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
   mg_send_response_line(c, 200,
-                        "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
+                        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, data, HISTORY_POINT_LEN - 11);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
@@ -131,7 +131,7 @@ static void get_dht_history_data_handler(struct mg_connection * c, int ev, void 
   mgos_runlock(dht->hist_data_lock);
   LOG(LL_INFO, ("DHT History Data Requested"));
   mg_send_response_line(c, 200,
-                        "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
+                        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, histStore, len);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
