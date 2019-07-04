@@ -98,7 +98,7 @@ $(document).ready(function () {
             $('#refreshBtn').removeClass('loading');
             $('#refreshBtn').removeClass('red');
         }).fail(function (xhr, status) {
-            console.log(xhr, status);
+            console.error(xhr, status);
             $('#refreshBtn').removeClass('loading');
             $('#refreshBtn').addClass('red');
         });
@@ -135,7 +135,7 @@ $(document).ready(function () {
             $('#refreshBtn').removeClass('loading');
             $('#refreshBtn').removeClass('red');
         }).fail(function (xhr, status) {
-            console.log(xhr, status);
+            console.error(xhr, status);
             $('#refreshBtn').removeClass('loading');
             $('#refreshBtn').addClass('red');
         });
