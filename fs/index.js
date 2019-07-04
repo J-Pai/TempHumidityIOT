@@ -63,7 +63,7 @@ $(document).ready(function () {
                     position: "left",
                     id: "y-axis-1",
                     scaleLabel: {
-                        labelString: "",
+                        labelString: "Temperature",
                         display: true,
                     }
                 }, {
@@ -90,7 +90,7 @@ $(document).ready(function () {
             const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
             tempType = infoTempHumi.t.includes("F") ? "&#176;F" : "&#176;C";
             const humi = parseFloat(infoTempHumi.h);
-            $("#currTemp").html(temp + "&#176;" + tempType);
+            $("#currTemp").html(temp + tempType);
             $("#currHumi").html(humi + "%");
             $("#currTimestamp").html(timestamp.toString());
         }).fail(function (xhr, status) {
@@ -108,7 +108,6 @@ $(document).ready(function () {
             const jsonStr = "[" + data + "]";
             console.log(data);
             const histTempHumi = JSON.parse(jsonStr);
-            console.log(histTempHumi);
 
             myChart.data.labels = [];
             tempDataset.data = [];
@@ -125,7 +124,6 @@ $(document).ready(function () {
                 tempDataset.data.push(temp);
                 humiDataset.data.push(humi);
             });
-            console.log(tempDataset, humiDataset);
             myChart.update();
         }).fail(function (xhr, status) {
             console.log(xhr, status);
