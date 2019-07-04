@@ -15,7 +15,6 @@ typedef struct Sensor_DHT {
   struct mgos_rlock_type * data_lock;
   float temperature;
   float humidity;
-  struct mgos_rlock_type * hist_data_lock;
   struct mbuf history;
 } Sensor_DHT;
 
@@ -122,11 +121,11 @@ static void get_dht_history_data_handler(struct mg_connection * c, int ev, void 
   Sensor_DHT * dht = (Sensor_DHT *)user_data;
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
-  mgos_rlock(dht->hist_data_lock);
+  mgos_rlock(dht->data_lock);
   size_t len = dht->history.len;
   char histStore[len];
   MEMCPY(histStore, dht->history.buf, len);
-  mgos_runlock(dht->hist_data_lock);
+  mgos_runlock(dht->data_lock);
   LOG(LL_INFO, ("DHT History Data Requested"));
   mg_send_response_line(c, 200,
                         "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
@@ -157,7 +156,7 @@ static void store_dht_measurement(void * arg) {
     sprintf(data, ",{\"i\":\"%03u\",\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
       index, timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
     // LOG(LL_INFO, ("Data: [%s]", data));
-    mgos_rlock(dht->hist_data_lock);
+    mgos_rlock(dht->data_lock);
     int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
     if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
       mbuf_remove(&dht->history, HISTORY_POINT_LEN);
@@ -192,18 +191,18 @@ static void store_dht_measurement(void * arg) {
     } else {
       LOG(LL_ERROR, ("Bad config history length?"));
     }
-    mgos_runlock(dht->hist_data_lock);
+    mgos_runlock(dht->data_lock);
   }
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
   // Initializing DHT Structure
   Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
+
   dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
   dht->data_lock = mgos_rlock_create();
   dht->temperature = 0.0f;
   dht->humidity = 0.0f;
-  dht->hist_data_lock = mgos_rlock_create();
   mbuf_init(&dht->history, 0);
 
   // Initializing Status LEDs
