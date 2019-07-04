@@ -111,13 +111,14 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
   time_t now;
   time(&now);
   mgos_strftime(timestamp, 30, "%FT%TZ", now);
-  char data[HISTORY_POINT_LEN - 9] = "";
+  char data[HISTORY_POINT_LEN - 11] = "";
   sprintf(data, "{\"d\":\"%s\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
     timestamp, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
   mg_send_response_line(c, 200,
                         "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, data, HISTORY_POINT_LEN - 11);
   c->flags |= (MG_F_SEND_AND_CLOSE);
+  free(c);
 }
 
 static void get_dht_history_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
@@ -134,6 +135,7 @@ static void get_dht_history_data_handler(struct mg_connection * c, int ev, void 
                         "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n");
   mg_send(c, histStore, len);
   c->flags |= (MG_F_SEND_AND_CLOSE);
+  free(c);
 }
 
 static void store_dht_measurement(void * arg) {
@@ -161,20 +163,19 @@ static void store_dht_measurement(void * arg) {
     // LOG(LL_INFO, ("Data: [%s]", data));
     mgos_rlock(dht->hist_data_lock);
     int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-    // LOG(LL_INFO, ("Pre-Removal Num Elements: %d", num_elements));
     if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
       mbuf_remove(&dht->history, HISTORY_POINT_LEN);
     }
-    num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-    // LOG(LL_INFO, ("Post-Removal Num Elements: %d", num_elements));
 
     if (num_elements < mgos_sys_config_get_app_dht_history_length()) {
       size_t appended = mbuf_append(
         &dht->history,
         dht->history.len ? data : &data[1],
         (dht->history.len ? HISTORY_POINT_LEN : HISTORY_POINT_LEN - 1) * sizeof(char));
+      num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
       if (!appended) {
-        LOG(LL_ERROR, ("Temperature not stored! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+        LOG(LL_ERROR, ("Temperature not stored! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+          num_elements,
           appended,
           dht->history.len,
           dht->history.size,
@@ -182,7 +183,8 @@ static void store_dht_measurement(void * arg) {
           humi,
           mgos_sys_config_get_app_dht_humidity_offset()));
       } else { // if (!mgos_sys_config_get_app_silent()) {
-        LOG(LL_INFO, ("Stored DHT Measurement! [Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+        LOG(LL_INFO, ("Stored DHT Measurement! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
+          num_elements,
           appended,
           dht->history.len,
           dht->history.size,

@@ -25,6 +25,7 @@ window.chartBgColors = {
 
 $(document).ready(function () {
     let tempType = "";
+    let refreshCnt = 0;
 
     const tempDataset = {
         label: 'Temperature',
@@ -82,19 +83,22 @@ $(document).ready(function () {
      * Make request for Temperature and Humidity and apply to HTML.
      */
     function requestCurrTempHumi() {
+        $('#refreshBtn').addClass('loading');
         $.ajax({
             url: HOST + "/dht"
         }).done(function (data) {
             const infoTempHumi = JSON.parse(data);
-            const timestamp = new Date(infoTempHumi.d);
+            const timestamp = moment(infoTempHumi.d).format("MMMM Do, YYYY - HH:mm:ss");
             const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
             tempType = infoTempHumi.t.includes("F") ? "&#176;F" : "&#176;C";
             const humi = parseFloat(infoTempHumi.h);
             $("#currTemp").html(temp + tempType);
             $("#currHumi").html(humi + "%");
             $("#currTimestamp").html(timestamp.toString());
+            $('#refreshBtn').removeClass('loading');
         }).fail(function (xhr, status) {
             console.log(xhr, status);
+            $('#refreshBtn').removeClass('loading');
         });
     }
 
@@ -102,11 +106,11 @@ $(document).ready(function () {
      * Request and Update Temperature and Humidity history graph.
      */
     function requestHistTempHumi() {
+        $('#refreshBtn').addClass('loading');
         $.ajax({
             url: HOST + "/dht/history"
         }).done(function (data) {
             const jsonStr = "[" + data + "]";
-            console.log(data);
             const histTempHumi = JSON.parse(jsonStr);
 
             myChart.data.labels = [];
@@ -125,11 +129,24 @@ $(document).ready(function () {
                 humiDataset.data.push(humi);
             });
             myChart.update();
+            $('#refreshBtn').removeClass('loading');
         }).fail(function (xhr, status) {
             console.log(xhr, status);
+            $('#refreshBtn').removeClass('loading');
         });
     }
 
     requestCurrTempHumi();
     requestHistTempHumi();
+
+    $('#refreshBtn').on('click', function() {
+        console.log('Refresh Clicked! ' + refreshCnt);
+        if(!$('#refreshBtn').hasClass('loading')) {
+            requestCurrTempHumi();
+            requestHistTempHumi();
+        } else {
+            console.log('Refresh in Progress!');
+        }
+        refreshCnt++;
+    });
 });
