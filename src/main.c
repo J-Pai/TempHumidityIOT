@@ -10,7 +10,7 @@
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
-typedef struct {
+typedef struct Sensor_DHT {
   struct mgos_dht * sensor;
   struct mgos_rlock_type * data_lock;
   float temperature;
