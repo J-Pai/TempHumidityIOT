@@ -22,10 +22,8 @@ typedef struct {
 static void dht_measurement(void * arg) {
   Sensor_DHT * dht = (Sensor_DHT *)arg;
   static bool dht_tick_tock = false;
-  mgos_rlock(dht->data_lock);
-  float temp = dht->temperature;
-  float humi = dht->humidity;
-  mgos_runlock(dht->data_lock);
+  float temp = -999.9f;
+  float humi = -999.9f;
   if (dht_tick_tock) {
     temp = mgos_dht_get_temp(dht->sensor);
     if (mgos_sys_config_get_app_dht_fahrenheit()) {
