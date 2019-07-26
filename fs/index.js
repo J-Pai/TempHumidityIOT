@@ -87,7 +87,6 @@ $(document).ready(function () {
             url: HOST + "/dht",
             timeout: 10000,
         }).done(function (data) {
-            // console.log('Current Data:', data);
             const infoTempHumi = JSON.parse(data);
             const timestamp = moment(infoTempHumi.d).format("MMMM Do, YYYY - HH:mm:ss");
             const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
@@ -115,7 +114,6 @@ $(document).ready(function () {
             url: HOST + "/dht/history",
             timeout: 10000,
         }).done(function (data) {
-            // console.log("Historical Data:", data);
             const jsonStr = "[" + data + "]";
             const histTempHumi = JSON.parse(jsonStr);
 
