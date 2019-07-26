@@ -85,8 +85,9 @@ $(document).ready(function () {
         $('#refreshBtn').addClass('loading');
         $.ajax({
             url: HOST + "/dht",
-            timeout: 5000,
+            timeout: 10000,
         }).done(function (data) {
+            console.log('Current Data:', data);
             const infoTempHumi = JSON.parse(data);
             const timestamp = moment(infoTempHumi.d).format("MMMM Do, YYYY - HH:mm:ss");
             const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
@@ -95,8 +96,9 @@ $(document).ready(function () {
             $("#currTemp").html(temp + tempType);
             $("#currHumi").html(humi + "%");
             $("#currTimestamp").html(timestamp.toString());
-            $('#refreshBtn').removeClass('loading');
-            $('#refreshBtn').removeClass('red');
+            setTimeout(function() {
+                requestHistTempHumi();
+            }, 1000);
         }).fail(function (xhr, status) {
             console.error(xhr, status);
             $('#refreshBtn').removeClass('loading');
@@ -111,8 +113,9 @@ $(document).ready(function () {
         $('#refreshBtn').addClass('loading');
         $.ajax({
             url: HOST + "/dht/history",
-            timeout: 5000,
+            timeout: 10000,
         }).done(function (data) {
+            console.log("Historical Data:", data);
             const jsonStr = "[" + data + "]";
             const histTempHumi = JSON.parse(jsonStr);
 
@@ -142,12 +145,10 @@ $(document).ready(function () {
     }
 
     requestCurrTempHumi();
-    requestHistTempHumi();
 
     $('#refreshBtn').on('click', function() {
         if(!$('#refreshBtn').hasClass('loading')) {
             requestCurrTempHumi();
-            requestHistTempHumi();
         } else {
             console.log('Refresh in Progress!');
         }
