@@ -178,7 +178,7 @@ static void store_dht_measurement(void * arg) {
     // ,{"i":"000","d":"9223372036854775807","t":000.0F","h":"000.0"}
     sprintf(data, ",{\"i\":\"%03u\",\"d\":\"%019ld\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
       index, now, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
-    LOG(LL_INFO, ("Data: [%s]", data));
+    // LOG(LL_INFO, ("Data: [%s]", data));
     mgos_rlock(dht->data_lock);
     int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
     if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {

@@ -125,31 +125,38 @@
 					url: HOST + "/dht/history",
 					timeout: 20000,
 				}).done(function (data) {
-					console.log(data);
 					const jsonStr = "[" + data + "]";
 					const histTempHumi = JSON.parse(jsonStr);
-
 					myChart.data.labels = [];
 					tempDataset.data = [];
 					humiDataset.data = [];
-
-					histTempHumi.forEach(element => {
-						const epoch = parseInt(element.d) * 1000;
-						const date = new Date(Date.now() - epoch);
-						console.log(date, date.getMilliseconds());
-						const timestamp = moment(date).format("YYYY-MM-DD HH:mm:ss");
-						const temp = parseFloat(element.t.substring(0, element.t.length - 1));
-						myChart.options.scales.yAxes[0].scaleLabel.labelString = element.t.includes("F") ?
-							"Temperature (" + String.fromCharCode(176) + "F)" :
-							"Temperature (" + String.fromCharCode(176) + "C)";
-						const humi = parseFloat(element.h);
-						myChart.data.labels.push(timestamp);
-						tempDataset.data.push(temp);
-						humiDataset.data.push(humi);
+					$.ajax({
+						url: HOST + "/uptime",
+						timeout: 10000,
+					}).done(function(uptime) {
+						const up = parseInt(uptime);
+						const currTime = Date.now();
+						histTempHumi.forEach(element => {
+							const epoch = (up - parseInt(element.d)) * 1000;
+							const date = new Date(currTime - epoch);
+							const timestamp = moment(date).format("YYYY-MM-DD HH:mm:ss");
+							const temp = parseFloat(element.t.substring(0, element.t.length - 1));
+							myChart.options.scales.yAxes[0].scaleLabel.labelString = element.t.includes("F") ?
+								"Temperature (" + String.fromCharCode(176) + "F)" :
+								"Temperature (" + String.fromCharCode(176) + "C)";
+							const humi = parseFloat(element.h);
+							myChart.data.labels.push(timestamp);
+							tempDataset.data.push(temp);
+							humiDataset.data.push(humi);
+						});
+						myChart.update();
+						$('#refreshBtn').removeClass('loading');
+						$('#refreshBtn').removeClass('red');
+					}).fail(function(xhr, status) {
+						console.error(xhr, status);
+						$('#refreshBtn').removeClass('loading');
+						$('#refreshBtn').addClass('red');
 					});
-					myChart.update();
-					$('#refreshBtn').removeClass('loading');
-					$('#refreshBtn').removeClass('red');
 				}).fail(function (xhr, status) {
 					console.error(xhr, status);
 					$('#refreshBtn').removeClass('loading');
