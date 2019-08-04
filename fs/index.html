@@ -132,7 +132,7 @@
 					humiDataset.data = [];
 					$.ajax({
 						url: HOST + "/uptime",
-						timeout: 10000,
+						timeout: 20000,
 					}).done(function(uptime) {
 						const up = parseInt(uptime);
 						const currTime = Date.now();
