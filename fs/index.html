@@ -10,7 +10,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/moment@2.24.0/moment.min.js"></script>
 	<script type="text/javascript">
 		const HOST = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" ?
-		"http://192.168.0.104" : "";
+		"http://192.168.0.194" : "";
 		console.log("HOST:", HOST);
 
 		window.chartColors = {
@@ -99,7 +99,7 @@
 					timeout: 20000,
 				}).done(function (data) {
 					const infoTempHumi = JSON.parse(data);
-					const timestamp = moment(infoTempHumi.d).format("MMMM Do, YYYY - HH:mm:ss");
+					const timestamp = moment(Date.now()).format("MMMM Do, YYYY - HH:mm:ss");
 					const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
 					tempType = infoTempHumi.t.includes("F") ? "&#176;F" : "&#176;C";
 					const humi = parseFloat(infoTempHumi.h);
@@ -125,6 +125,7 @@
 					url: HOST + "/dht/history",
 					timeout: 20000,
 				}).done(function (data) {
+					console.log(data);
 					const jsonStr = "[" + data + "]";
 					const histTempHumi = JSON.parse(jsonStr);
 
@@ -133,7 +134,10 @@
 					humiDataset.data = [];
 
 					histTempHumi.forEach(element => {
-						const timestamp = moment(element.d).format("YYYY-MM-DD HH:mm:ss");
+						const epoch = parseInt(element.d) * 1000;
+						const date = new Date(Date.now() - epoch);
+						console.log(date, date.getMilliseconds());
+						const timestamp = moment(date).format("YYYY-MM-DD HH:mm:ss");
 						const temp = parseFloat(element.t.substring(0, element.t.length - 1));
 						myChart.options.scales.yAxes[0].scaleLabel.labelString = element.t.includes("F") ?
 							"Temperature (" + String.fromCharCode(176) + "F)" :
