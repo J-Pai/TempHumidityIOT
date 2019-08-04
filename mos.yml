@@ -33,6 +33,7 @@ config_schema:
   - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
   - ["app.dht.history_length", "i", 50, {title: "Amount many historical data points to store"}]
   - ["app.dht.history_period", "i", 900000, {title: "Amount of time between storing of each historical data point (milliseconds)"}] # 15 minutes = 900000 ms
+  - ["app.sw.pin", "i", 4, {title: "GPIO pin Switch is attached to"}]
   - ["app.silent", "b", false, {title: "Enable silent running (No LEDs, No Logs)"}]
 
 # These settings get compiled into the C structure, and can be accessed

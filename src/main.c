@@ -83,7 +83,9 @@ static void server_status(void * arg) {
 }
 
 static void led_status(void * arg) {
-  if (!mgos_sys_config_get_app_silent()) {
+  bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
+
+  if (!mgos_sys_config_get_app_silent() && sw == true) {
     mgos_gpio_toggle(MAIN_LED);
     if (MGOS_WIFI_IP_ACQUIRED == mgos_wifi_get_status()) {
       mgos_gpio_toggle(SECONDARY_LED);
@@ -95,6 +97,7 @@ static void led_status(void * arg) {
     mgos_gpio_setup_output(SECONDARY_LED, 1);
     mgos_gpio_setup_output(TERTIARY_LED, 1);
   }
+
   (void) arg;
 }
 
@@ -233,6 +236,10 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_gpio_setup_output(MAIN_LED, 1);
   mgos_gpio_setup_output(SECONDARY_LED, 1);
   mgos_gpio_setup_output(TERTIARY_LED, 1);
+
+  // Initializing Switch Pin
+  mgos_gpio_set_mode(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_MODE_INPUT);
+  mgos_gpio_set_pull(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_PULL_UP);
 
   mgos_register_http_endpoint("/uptime", get_uptime_handler, NULL);
   // Setup HTTP call to obtain current Temperature and Humidity
