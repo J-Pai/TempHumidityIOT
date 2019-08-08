@@ -22,6 +22,7 @@ typedef struct Sensor_DHT {
 static void dht_measurement(void * arg) {
   Sensor_DHT * dht = (Sensor_DHT *)arg;
   static bool dht_tick_tock = false;
+  bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
   float temp = -999.9f;
   float humi = -999.9f;
   if (dht_tick_tock) {
@@ -30,23 +31,25 @@ static void dht_measurement(void * arg) {
       temp = C_TO_F(temp);
     }
     mgos_rlock(dht->data_lock);
+    humi = dht->humidity;
     dht->temperature = temp;
     mgos_runlock(dht->data_lock);
   } else {
     humi = mgos_dht_get_humidity(dht->sensor) + mgos_sys_config_get_app_dht_humidity_offset();
     mgos_rlock(dht->data_lock);
     dht->humidity = humi;
+    temp = dht->temperature;
     mgos_runlock(dht->data_lock);
   }
-  /*
-  if (!mgos_sys_config_get_app_silent()) {
+
+  if (!mgos_sys_config_get_app_silent() && sw == true) {
     LOG(LL_INFO, ("Pin: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
       mgos_sys_config_get_app_dht_pin(),
       temp,
       humi,
       mgos_sys_config_get_app_dht_humidity_offset()));
   }
-  */
+
   dht_tick_tock = !dht_tick_tock;
 }
 
@@ -139,10 +142,6 @@ static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, voi
 }
 
 static void get_dht_history_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
-  enum mgos_wifi_status status = mgos_wifi_get_status();
-  if (status != MGOS_WIFI_IP_ACQUIRED) {
-    return;
-  }
   Sensor_DHT * dht = (Sensor_DHT *)user_data;
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
@@ -159,10 +158,6 @@ static void get_dht_history_data_handler(struct mg_connection * c, int ev, void 
 }
 
 static void store_dht_measurement(void * arg) {
-  enum mgos_wifi_status status = mgos_wifi_get_status();
-  if (status != MGOS_WIFI_IP_ACQUIRED) {
-    return;
-  }
   Sensor_DHT * dht = (Sensor_DHT *)arg;
   static unsigned int index = 0;
   mgos_rlock(dht->data_lock);
