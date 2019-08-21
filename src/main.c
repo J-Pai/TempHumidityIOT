@@ -22,7 +22,7 @@ typedef struct Sensor_DHT {
 static void dht_measurement(void * arg) {
   Sensor_DHT * dht = (Sensor_DHT *)arg;
   static bool dht_tick_tock = false;
-  bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
+  // bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
   float temp = -999.9f;
   float humi = -999.9f;
   if (dht_tick_tock) {
@@ -42,7 +42,7 @@ static void dht_measurement(void * arg) {
     mgos_runlock(dht->data_lock);
   }
 
-  if (!mgos_sys_config_get_app_silent() && sw == true) {
+  if (!mgos_sys_config_get_app_silent()) {
     LOG(LL_INFO, ("Pin: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
       mgos_sys_config_get_app_dht_pin(),
       temp,
