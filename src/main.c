@@ -191,6 +191,7 @@ static void store_dht_measurement(void * arg) {
         (dht->history.len ? HISTORY_POINT_LEN : HISTORY_POINT_LEN - 1) * sizeof(char));
       num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
       if (!appended) {
+        /*
         LOG(LL_ERROR, ("Temperature not stored! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
           num_elements,
           appended,
@@ -199,7 +200,10 @@ static void store_dht_measurement(void * arg) {
           temp,
           humi,
           mgos_sys_config_get_app_dht_humidity_offset()));
+          */
+         LOG(LL_ERROR, ("Temperature not stored!"));
       } else { // if (!mgos_sys_config_get_app_silent()) {
+        /*
         LOG(LL_INFO, ("Stored DHT Measurement! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
           num_elements,
           appended,
@@ -209,6 +213,8 @@ static void store_dht_measurement(void * arg) {
           humi,
           mgos_sys_config_get_app_dht_humidity_offset()));
           index = (index + 1) % 999;
+          */
+         LOG(LL_INFO, ("Stored DHT Measurement!"));
       }
     } else {
       LOG(LL_ERROR, ("Bad config history length?"));
