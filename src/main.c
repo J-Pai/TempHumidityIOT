@@ -86,7 +86,8 @@ static void server_status(void * arg) {
 }
 
 static void led_status(void * arg) {
-  bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
+  static bool sw = false;
+  sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
 
   if (!mgos_sys_config_get_app_silent() && sw == true) {
     mgos_gpio_toggle(MAIN_LED);
@@ -223,6 +224,12 @@ static void store_dht_measurement(void * arg) {
   }
 }
 
+static void handle_flash_button(int pin, void * arg) {
+  LOG(LL_INFO, ("Button Clicked %d", pin));
+  mgos_wifi_connect();
+  (void) arg;
+}
+
 enum mgos_app_init_result mgos_app_init(void) {
   // Initializing DHT Structure
   Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
@@ -241,6 +248,9 @@ enum mgos_app_init_result mgos_app_init(void) {
   // Initializing Switch Pin
   mgos_gpio_set_mode(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_MODE_INPUT);
   mgos_gpio_set_pull(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_PULL_UP);
+
+  // Setup handling of flash button
+  mgos_gpio_set_button_handler(0, MGOS_GPIO_PULL_UP, MGOS_GPIO_INT_EDGE_NEG, 50, handle_flash_button, NULL);
 
   mgos_register_http_endpoint("/uptime", get_uptime_handler, NULL);
   // Setup HTTP call to obtain current Temperature and Humidity
