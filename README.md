@@ -18,7 +18,7 @@ Humidity/Temperature sensor used is a DHT11.
 ![Interface](.md/IOT_Interface.png)
 
 ## Schematic
-![Schematic](.md/TempHumidityIOT_bb.png)
+![Schematic](.md/TempHumidityIOT_bb.svg)
 
 ## Cloning Repo
 This repository contains Mongoose OS as a submodule for auto-complete purposes.
