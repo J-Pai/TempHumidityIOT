@@ -29,7 +29,7 @@ filesystem:
 
 config_schema:
   - ["app.dht.pin", "i", 5, {title: "GPIO pin DHT sensor is attached to"}]
-  - ["app.dht.fahrenheit", "b", true, {title: "Use Fahrenheit"}]
+  - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
   - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
   - ["app.dht.history_length", "i", 50, {title: "Amount many historical data points to store"}]
   - ["app.dht.history_period", "i", 900000, {title: "Amount of time between storing of each historical data point (milliseconds)"}] # 15 minutes = 900000 ms

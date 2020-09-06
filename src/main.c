@@ -6,8 +6,8 @@
 #define C_TO_F(c) (((c) * 1.8f) + 32.0f)
 
 #define MAIN_LED 16
-#define DATA_POINT_LEN 52
-#define HISTORY_POINT_LEN (DATA_POINT_LEN + 11)
+#define DATA_POINT_LEN 52 + 1
+#define HISTORY_POINT_LEN (DATA_POINT_LEN + 11) + 1
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
@@ -113,7 +113,7 @@ static void get_uptime_handler(struct mg_connection * c, int ev, void * p, void 
   time_t now;
   time(&now);
   // 9223372036854775807 --> 19 Chars
-  char uptime[19] = "";
+  char uptime[20] = "";
   sprintf(uptime, "%019ld", now);
   mg_send_response_line(c, 200,
                         "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
