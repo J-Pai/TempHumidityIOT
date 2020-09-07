@@ -30,7 +30,9 @@ This repository contains Mongoose OS as a submodule for auto-complete purposes.
 1) `mos build` - Build code and generate fw.zip file.
 2) `mos flash` - Flash onto ESP8266 board.
 3) `mos wifi <SSID> <PASSWD>` - Setup Wifi connection.
-4) `mos console` - Watch for SSID and assigned IP address to connect to.
+4) `mos console --set-control-lines=false` - Watch for SSID and assigned IP address to connect to.
+
+   `--set-control-lines=false` prevents `mos console` from reseting the device.
 
 ## Configuration Options
 ```
