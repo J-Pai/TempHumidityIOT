@@ -224,11 +224,13 @@ static void store_dht_measurement(void * arg) {
   }
 }
 
+/*
 static void handle_flash_button(int pin, void * arg) {
   LOG(LL_INFO, ("Button Clicked %d", pin));
   mgos_wifi_connect();
   (void) arg;
 }
+*/
 
 enum mgos_app_init_result mgos_app_init(void) {
   // Initializing DHT Structure
@@ -250,7 +252,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_gpio_set_pull(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_PULL_UP);
 
   // Setup handling of flash button
-  mgos_gpio_set_button_handler(0, MGOS_GPIO_PULL_UP, MGOS_GPIO_INT_EDGE_NEG, 50, handle_flash_button, NULL);
+  // mgos_gpio_set_button_handler(0, MGOS_GPIO_PULL_UP, MGOS_GPIO_INT_EDGE_NEG, 50, handle_flash_button, NULL);
 
   mgos_register_http_endpoint("/uptime", get_uptime_handler, NULL);
   // Setup HTTP call to obtain current Temperature and Humidity
