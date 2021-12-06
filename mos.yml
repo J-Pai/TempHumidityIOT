@@ -28,13 +28,21 @@ filesystem:
 # Uncomment and modify according to your needs:
 
 config_schema:
-  - ["app.dht.pin", "i", 5, {title: "GPIO pin DHT sensor is attached to"}]
   - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
   - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
-  - ["app.dht.history_length", "i", 50, {title: "Amount many historical data points to store"}]
-  - ["app.dht.history_period", "i", 900000, {title: "Amount of time between storing of each historical data point (milliseconds)"}] # 15 minutes = 900000 ms
-  - ["app.sw.pin", "i", 4, {title: "GPIO pin Switch is attached to"}]
-  - ["app.silent", "b", false, {title: "Enable silent running (No LEDs, No Logs)"}]
+  - ["wifi.sta.ip", "s", "192.168.0.82", {title: "Static IP address"}]
+  - ["wifi.sta.netmask", "s", "255.255.255.0", {title: "Static netmask"}]
+
+cdefs:
+  # GPIO pin that DHT is connected to.
+  DHT_PIN: 5
+  # Number of data points to save.
+  DHT_HISTORY_MAX_SIZE: 100
+  # Amount of time between storing of each historical data point (milliseconds).
+  # 15 minutes = 900000 ms
+  DHT_HISTORY_PERIOD: 5000
+  # GPIO pin that the switch is attached to.
+  LED_ENABLE_PIN: 4
 
 # These settings get compiled into the C structure, and can be accessed
 # from the C code this way:

@@ -3,57 +3,64 @@
 #include "mgos_dht.h"
 #include "mgos_http_server.h"
 
-#define C_TO_F(c) (((c) * 1.8f) + 32.0f)
-
 #define MAIN_LED 16
-#define DATA_POINT_LEN 52 + 1
-#define HISTORY_POINT_LEN (DATA_POINT_LEN + 11) + 1
 #define SECONDARY_LED mgos_sys_config_get_board_led1_pin()
 #define TERTIARY_LED mgos_sys_config_get_board_led2_pin()
 
-typedef struct Sensor_DHT {
-  struct mgos_dht * sensor;
-  struct mgos_rlock_type * data_lock;
+#define C_TO_F(c) (((c) * 1.8f) + 32.0f)
+#define DATA_POINT_FORMAT \
+        "{\"d\":\"%019ld\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}"
+#define DATA_POINT_LEN 53
+#define HTTP_HDR \
+        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n"
+
+struct Data {
+  time_t timestamp;
   float temperature;
   float humidity;
-  struct mbuf history;
-} Sensor_DHT;
+};
 
-static void dht_measurement(void * arg) {
-  Sensor_DHT * dht = (Sensor_DHT *)arg;
-  static bool dht_tick_tock = false;
-  // bool sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
+struct SensorDHT {
+  struct mgos_dht *sensor;
+  float temperature;
+  float humidity;
+  uint16_t history_index;
+  struct Data history[DHT_HISTORY_MAX_SIZE];
+};
+
+struct mgos_rlock_type *data_lock;
+struct SensorDHT dht;
+bool dht_toggle = false;
+
+static void dht_measurement(void *arg) {
   float temp = -999.9f;
   float humi = -999.9f;
-  if (dht_tick_tock) {
-    temp = mgos_dht_get_temp(dht->sensor);
+  mgos_rlock(data_lock);
+  if (dht_toggle) {
+    temp = mgos_dht_get_temp(dht.sensor);
     if (mgos_sys_config_get_app_dht_fahrenheit()) {
       temp = C_TO_F(temp);
     }
-    mgos_rlock(dht->data_lock);
-    humi = dht->humidity;
-    dht->temperature = temp;
-    mgos_runlock(dht->data_lock);
+    humi = dht.humidity;
+    dht.temperature = temp;
   } else {
-    humi = mgos_dht_get_humidity(dht->sensor) + mgos_sys_config_get_app_dht_humidity_offset();
-    mgos_rlock(dht->data_lock);
-    dht->humidity = humi;
-    temp = dht->temperature;
-    mgos_runlock(dht->data_lock);
+    humi = mgos_dht_get_humidity(dht.sensor) +
+           mgos_sys_config_get_app_dht_humidity_offset();
+    dht.humidity = humi;
+    temp = dht.temperature;
   }
 
-  if (!mgos_sys_config_get_app_silent()) {
-    LOG(LL_INFO, ("Pin: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
-      mgos_sys_config_get_app_dht_pin(),
+  LOG(LL_INFO, ("Pin: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
+      DHT_PIN,
       temp,
       humi,
       mgos_sys_config_get_app_dht_humidity_offset()));
-  }
 
-  dht_tick_tock = !dht_tick_tock;
+  dht_toggle = !dht_toggle;
+  mgos_runlock(data_lock);
 }
 
-static void server_status(void * arg) {
+static void server_status(void *arg) {
   enum mgos_wifi_status status = mgos_wifi_get_status();
   static bool s_tick_tock = false;
   if (status == MGOS_WIFI_IP_ACQUIRED) {
@@ -62,34 +69,35 @@ static void server_status(void * arg) {
     bool obtained = mgos_net_get_ip_info(MGOS_NET_IF_TYPE_WIFI, 0, &ip_info);
     char ip[16] = "";
     mgos_net_ip_to_str(&(ip_info.ip), ip);
-    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free | Network Connected (Status: %d)[%s][%s]",
-      (s_tick_tock ? "Tick" : "Tock"),
-      mgos_uptime(), (unsigned long) mgos_get_heap_size(),
-      (unsigned long) mgos_get_free_heap_size(),
-      status, ssid, true == obtained ? ip : ""));
+    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free |"
+                  "Network Connected (Status: %d)[%s][%s]",
+                  (s_tick_tock ? "Tick" : "Tock"),
+                  mgos_uptime(), (unsigned long) mgos_get_heap_size(),
+                  (unsigned long) mgos_get_free_heap_size(),
+                  status, ssid, true == obtained ? ip : ""));
     free(ssid);
   } else if (status == MGOS_WIFI_CONNECTED || status == MGOS_WIFI_CONNECTING) {
-    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free | Network Pending... (Status: %d)",
-      (s_tick_tock ? "Tick" : "Tock"),
-      mgos_uptime(), (unsigned long) mgos_get_heap_size(),
-      (unsigned long) mgos_get_free_heap_size(),
-      status));
+    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free |"
+                  "Network Pending... (Status: %d)",
+                  (s_tick_tock ? "Tick" : "Tock"),
+                  mgos_uptime(), (unsigned long) mgos_get_heap_size(),
+                  (unsigned long) mgos_get_free_heap_size(),
+                  status));
   } else {
-    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free | Network Disconnected (Status: %d)",
-      (s_tick_tock ? "Tick" : "Tock"),
-      mgos_uptime(), (unsigned long) mgos_get_heap_size(),
-      (unsigned long) mgos_get_free_heap_size(),
-      status));
+    LOG(LL_INFO, ("%s uptime: %.2lf, RAM: %lu, %lu free |"
+                  "Network Disconnected (Status: %d)",
+                  (s_tick_tock ? "Tick" : "Tock"),
+                  mgos_uptime(), (unsigned long) mgos_get_heap_size(),
+                  (unsigned long) mgos_get_free_heap_size(),
+                  status));
   }
   s_tick_tock = !s_tick_tock;
-  (void) arg;
 }
 
-static void led_status(void * arg) {
-  static bool sw = false;
-  sw = mgos_gpio_read(mgos_sys_config_get_app_sw_pin());
+static void led_status(void *arg) {
+  uint8_t sw = mgos_gpio_read(LED_ENABLE_PIN);
 
-  if (!mgos_sys_config_get_app_silent() && sw == true) {
+  if (sw == true) {
     mgos_gpio_toggle(MAIN_LED);
     if (MGOS_WIFI_IP_ACQUIRED == mgos_wifi_get_status()) {
       mgos_gpio_toggle(SECONDARY_LED);
@@ -101,146 +109,122 @@ static void led_status(void * arg) {
     mgos_gpio_setup_output(SECONDARY_LED, 1);
     mgos_gpio_setup_output(TERTIARY_LED, 1);
   }
-
-  (void) arg;
 }
 
-static void get_uptime_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
-  (void) user_data;
-  (void) p;
-  if (ev != MG_EV_HTTP_REQUEST) return;
+static void get_uptime_handler(struct mg_connection *c, int ev, void *p,
+    void *user_data) {
+  if (ev != MG_EV_HTTP_REQUEST)
+    return;
   LOG(LL_INFO, ("Uptime Requested"));
   time_t now;
   time(&now);
   // 9223372036854775807 --> 19 Chars
   char uptime[20] = "";
   sprintf(uptime, "%019ld", now);
-  mg_send_response_line(c, 200,
-                        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
+  mg_send_response_line(c, 200, HTTP_HDR);
   mg_send(c, uptime, 19);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
-static void get_dht_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
-  Sensor_DHT * dht = (Sensor_DHT *)user_data;
-  (void) p;
-  if (ev != MG_EV_HTTP_REQUEST) return;
-  mgos_rlock(dht->data_lock);
-  float temp = dht->temperature;
-  float humi = dht->humidity;
-  mgos_runlock(dht->data_lock);
+static void get_dht_data_handler(struct mg_connection *c, int ev, void *p,
+    void *user_data) {
+  if (ev != MG_EV_HTTP_REQUEST)
+    return;
+  mgos_rlock(data_lock);
+  float temp = dht.temperature;
+  float humi = dht.humidity;
+  mgos_runlock(data_lock);
   LOG(LL_INFO, ("DHT Data Requested"));
   time_t now;
   time(&now);
-  char data[DATA_POINT_LEN] = "";
-  // {"d":"9223372036854775807","t":000.0F","h":"000.0"}
-  sprintf(data, "{\"d\":\"%019ld\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
-    now, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
-  mg_send_response_line(c, 200,
-                        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
-  mg_send(c, data, DATA_POINT_LEN);
+  char data[DATA_POINT_LEN];
+  sprintf(data, DATA_POINT_FORMAT, now, temp,
+          mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
+  mg_send_response_line(c, 200, HTTP_HDR);
+  mg_send(c, data, DATA_POINT_LEN - 1);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
-static void get_dht_history_data_handler(struct mg_connection * c, int ev, void * p, void * user_data) {
-  Sensor_DHT * dht = (Sensor_DHT *)user_data;
-  (void) p;
-  if (ev != MG_EV_HTTP_REQUEST) return;
-  mgos_rlock(dht->data_lock);
-  size_t len = dht->history.len;
-  char histStore[len];
-  MEMCPY(histStore, dht->history.buf, len);
-  mgos_runlock(dht->data_lock);
+static void get_dht_history_data_handler(struct mg_connection *c, int ev,
+    void *p, void *user_data) {
+  if (ev != MG_EV_HTTP_REQUEST)
+    return;
   LOG(LL_INFO, ("DHT History Data Requested"));
-  mg_send_response_line(c, 200,
-                        "Content-Type: text/plain; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\n");
-  mg_send(c, histStore, len);
+
+  mgos_rlock(data_lock);
+  LOG(LL_INFO, ("Data request start..."));
+
+  uint16_t start_index = (dht.history_index + 1) % DHT_HISTORY_MAX_SIZE;
+
+  char hist_data[DHT_HISTORY_MAX_SIZE * DATA_POINT_LEN + 1];
+  hist_data[DHT_HISTORY_MAX_SIZE * DATA_POINT_LEN] = 0;
+
+  for (uint16_t i = 0; i < DHT_HISTORY_MAX_SIZE; ++i) {
+    uint16_t index = (start_index + i) % DHT_HISTORY_MAX_SIZE;
+    if (dht.history[index].timestamp == 0)
+      continue;
+
+    char data_point[DATA_POINT_LEN + 1];
+
+    data_point[0] = ',';
+
+    sprintf(data_point + 1,
+            DATA_POINT_FORMAT,
+            dht.history[index].timestamp,
+            dht.history[index].temperature,
+            mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C',
+            dht.history[index].humidity);
+
+    LOG(LL_INFO, ("Index %u: %s", index, data_point));
+    memcpy(hist_data + (DATA_POINT_LEN * index), data_point, DATA_POINT_LEN);
+    hist_data[DATA_POINT_LEN * index + DATA_POINT_LEN + 1] = 0;
+  }
+
+  LOG(LL_INFO, ("Entire String %s", hist_data));
+
+  LOG(LL_INFO, ("Data request end..."));
+  mgos_runlock(data_lock);
+
+  // mg_send_response_line(c, 200, HTTP_HDR);
+  // mg_send(c, hist_data, len);
   c->flags |= (MG_F_SEND_AND_CLOSE);
 }
 
-static void store_dht_measurement(void * arg) {
-  Sensor_DHT * dht = (Sensor_DHT *)arg;
-  static unsigned int index = 0;
-  mgos_rlock(dht->data_lock);
-  float temp = dht->temperature;
-  float humi = dht->humidity;
-  mgos_runlock(dht->data_lock);
+static void store_dht_measurement(void *arg) {
+  mgos_rlock(data_lock);
+
+  float temp = dht.temperature;
+  float humi = dht.humidity;
   time_t now;
   time(&now);
-  /**
-   * Ensure that current time is past 2019/01/01.
-   *
-   * If time is before that, chances are internal time has been reset...
-   */
+
   if (temp >= 0 && humi >= 0) {
-    char data[HISTORY_POINT_LEN] = "";
-    // ,{"i":"000","d":"9223372036854775807","t":000.0F","h":"000.0"}
-    sprintf(data, ",{\"i\":\"%03u\",\"d\":\"%019ld\",\"t\":\"%05.1f%c\",\"h\":\"%05.1f\"}",
-      index, now, temp, mgos_sys_config_get_app_dht_fahrenheit() ? 'F' : 'C', humi);
-    // LOG(LL_INFO, ("Data: [%s]", data));
-    mgos_rlock(dht->data_lock);
-    int num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-    if (num_elements >= mgos_sys_config_get_app_dht_history_length()) {
-      mbuf_remove(&dht->history, HISTORY_POINT_LEN);
-    }
-    num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
+    uint16_t index = dht.history_index;
+    LOG(LL_INFO, ("Storing DHT Measurement"
+        "Index: %d | Temperature: %05.1f | Humidity: %05.1f (Offset: %d)",
+        index,
+        temp,
+        humi,
+        mgos_sys_config_get_app_dht_humidity_offset()));
 
-    if (num_elements < mgos_sys_config_get_app_dht_history_length()) {
-      size_t appended = mbuf_append(
-        &dht->history,
-        dht->history.len ? data : &data[1],
-        (dht->history.len ? HISTORY_POINT_LEN : HISTORY_POINT_LEN - 1) * sizeof(char));
-      num_elements = (dht->history.len + 1) / HISTORY_POINT_LEN;
-      if (!appended) {
-        /*
-        LOG(LL_ERROR, ("Temperature not stored! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
-          num_elements,
-          appended,
-          dht->history.len,
-          dht->history.size,
-          temp,
-          humi,
-          mgos_sys_config_get_app_dht_humidity_offset()));
-          */
-         LOG(LL_ERROR, ("Temperature not stored!"));
-      } else { // if (!mgos_sys_config_get_app_silent()) {
-        /*
-        LOG(LL_INFO, ("Stored DHT Measurement! [Num Elements: %u, Appended Bytes: %d, mbuf Len: %d, mbuf Size: %d] [Temperature: %05.1f | Humidity: %05.1f (Offset: %d)]",
-          num_elements,
-          appended,
-          dht->history.len,
-          dht->history.size,
-          temp,
-          humi,
-          mgos_sys_config_get_app_dht_humidity_offset()));
-          index = (index + 1) % 999;
-          */
-         LOG(LL_INFO, ("Stored DHT Measurement!"));
-      }
-    } else {
-      LOG(LL_ERROR, ("Bad config history length?"));
-    }
-    mgos_runlock(dht->data_lock);
+    dht.history[index].timestamp = now;
+    dht.history[index].temperature = temp;
+    dht.history[index].humidity = humi;
+
+    dht.history_index = (index + 1) % DHT_HISTORY_MAX_SIZE;
   }
+  mgos_runlock(data_lock);
 }
-
-/*
-static void handle_flash_button(int pin, void * arg) {
-  LOG(LL_INFO, ("Button Clicked %d", pin));
-  mgos_wifi_connect();
-  (void) arg;
-}
-*/
 
 enum mgos_app_init_result mgos_app_init(void) {
   // Initializing DHT Structure
-  Sensor_DHT * dht = (Sensor_DHT *)malloc(sizeof(Sensor_DHT));
+  dht.sensor = mgos_dht_create(DHT_PIN, DHT11);
+  data_lock = mgos_rlock_create();
+  dht.temperature = 0.0f;
+  dht.humidity = 0.0f;
+  dht.history_index = 0;
 
-  dht->sensor = mgos_dht_create(mgos_sys_config_get_app_dht_pin(), DHT11);
-  dht->data_lock = mgos_rlock_create();
-  dht->temperature = 0.0f;
-  dht->humidity = 0.0f;
-  mbuf_init(&dht->history, 0);
+  memset(&dht.history, 0, sizeof(dht.history));
 
   // Initializing Status LEDs
   mgos_gpio_setup_output(MAIN_LED, 1);
@@ -248,21 +232,19 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_gpio_setup_output(TERTIARY_LED, 1);
 
   // Initializing Switch Pin
-  mgos_gpio_set_mode(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_MODE_INPUT);
-  mgos_gpio_set_pull(mgos_sys_config_get_app_sw_pin(), MGOS_GPIO_PULL_UP);
-
-  // Setup handling of flash button
-  // mgos_gpio_set_button_handler(0, MGOS_GPIO_PULL_UP, MGOS_GPIO_INT_EDGE_NEG, 50, handle_flash_button, NULL);
+  mgos_gpio_set_mode(LED_ENABLE_PIN, MGOS_GPIO_MODE_INPUT);
+  mgos_gpio_set_pull(LED_ENABLE_PIN, MGOS_GPIO_PULL_UP);
 
   mgos_register_http_endpoint("/uptime", get_uptime_handler, NULL);
   // Setup HTTP call to obtain current Temperature and Humidity
-  mgos_register_http_endpoint("/dht", get_dht_data_handler, dht);
+  mgos_register_http_endpoint("/dht", get_dht_data_handler, NULL);
   // Setup HTTP call to obtain history Temperature and Humidity
-  mgos_register_http_endpoint("/dht/history", get_dht_history_data_handler, dht);
+  mgos_register_http_endpoint("/dht/history", get_dht_history_data_handler,
+      NULL);
   // Setup Periodic Measurement of Temperature and Humidity
-  mgos_set_timer(2500, true, dht_measurement, dht);
+  mgos_set_timer(2500, true, dht_measurement, NULL);
   // Setup Periodic Storing of Temperature and Humidity
-  mgos_set_timer(mgos_sys_config_get_app_dht_history_period(), true, store_dht_measurement, dht);
+  mgos_set_timer(DHT_HISTORY_PERIOD, true, store_dht_measurement, NULL);
   // Setup Periodic Led Flashing
   mgos_set_timer(1000, true, led_status, NULL);
   // Setup Periodic Reporting of HTTP Server Info
