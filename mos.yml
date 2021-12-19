@@ -2,11 +2,6 @@ name: TempHumidityIOT
 author: j-pai
 description: Temperature and Humidity tracking device
 arch: ESP8266
-version: 1.0
-
-libs_version: ${mos.version}
-modules_version: ${mos.version}
-mongoose_os_version: ${mos.version}
 
 # build_vars:
 #  FS_SIZE: 524288
@@ -23,12 +18,12 @@ sources:
 filesystem:
   - fs
 
-# Custom configuration entries, settable via "device configuration"
+# Custom configuration entries, settable via "device configuration"24
 # Below is a custom firmware configuration example.
 # Uncomment and modify according to your needs:
 
 config_schema:
-  - ["app.dht.fahrenheit", "b", false, {title: "Use Fahrenheit"}]
+  - ["app.dht.fahrenheit", "b", true, {title: "Use Fahrenheit"}]
   - ["app.dht.humidity_offset", "i", 5, {title: "Constant offset for humidity"}]
   - ["wifi.sta.ip", "s", "192.168.0.82", {title: "Static IP address"}]
   - ["wifi.sta.netmask", "s", "255.255.255.0", {title: "Static netmask"}]
@@ -37,10 +32,10 @@ cdefs:
   # GPIO pin that DHT is connected to.
   DHT_PIN: 5
   # Number of data points to save.
-  DHT_HISTORY_MAX_SIZE: 100
+  DHT_HISTORY_MAX_SIZE: 24
   # Amount of time between storing of each historical data point (milliseconds).
   # 15 minutes = 900000 ms
-  DHT_HISTORY_PERIOD: 5000
+  DHT_HISTORY_PERIOD: 3600000
   # GPIO pin that the switch is attached to.
   LED_ENABLE_PIN: 4
 

@@ -88,7 +88,7 @@ $(document).ready(function () {
             timeout: 20000,
         }).done(function (data) {
             const infoTempHumi = JSON.parse(data.replace(/\0/g, ''));
-            console.log(infoTempHumi);
+            console.log("Current Data: ", infoTempHumi);
             const timestamp = moment(Date.now()).format("MMMM Do, YYYY - HH:mm:ss");
             const temp = parseFloat(infoTempHumi.t.substring(0, infoTempHumi.t.length - 1));
             tempType = infoTempHumi.t.includes("F") ? "&#176;F" : "&#176;C";
@@ -116,8 +116,8 @@ $(document).ready(function () {
             timeout: 20000,
         }).done(function (data) {
             const jsonStr = "[" + data.replace(/\0/g, '') + "]";
-            console.log(jsonStr);
             const histTempHumi = JSON.parse(jsonStr);
+            console.log("Historical Data: ", histTempHumi);
             myChart.data.labels = [];
             tempDataset.data = [];
             humiDataset.data = [];
@@ -127,7 +127,7 @@ $(document).ready(function () {
                     timeout: 20000,
                 }).done(function(uptime) {
                     const up = parseInt(uptime.replace(/\0/g, ''));
-                    console.log(up);
+                    console.log("Uptime: " + up);
                     const currTime = Date.now();
                     histTempHumi.forEach(element => {
                         const epoch = (up - parseInt(element.d)) * 1000;
